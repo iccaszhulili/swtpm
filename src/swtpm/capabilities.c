@@ -46,6 +46,7 @@
 
 #include "capabilities.h"
 #include "logging.h"
+#include "tpmlib.h"
 
 /* Convert the RSA key size indicators supported by libtpms into capability
  * strings.
@@ -124,6 +125,12 @@ int capabilities_print_json(bool cusetpm)
 #endif
     char *keysizecaps = NULL;
 
+#ifdef LIBTPMS_HAS_FLAGS_SUPPORT
+    bool hlkcompl = tpmlib_is_flag_supported(TPMLIB_FLAG_HLK_COMPLIANCE);
+#else
+    bool hlkcompl = false;
+#endif
+
     ret = get_rsa_keysize_caps(&keysizecaps);
     if (ret < 0)
         goto cleanup;
@@ -132,7 +139,7 @@ int capabilities_print_json(bool cusetpm)
          "{ "
          "\"type\": \"swtpm\", "
          "\"features\": [ "
-             "%s%s%s%s%s%s"
+             "%s%s%s%s%s%s%s"
           " ] "
          "}",
          !cusetpm     ? "\"tpm-send-command-header\", ": "",
@@ -140,7 +147,8 @@ int capabilities_print_json(bool cusetpm)
          cmdarg_seccomp,
          true         ? "\"cmdarg-key-fd\", "          : "",
          true         ? "\"cmdarg-pwd-fd\""            : "",
-         keysizecaps  ? keysizecaps                    : ""
+         keysizecaps  ? keysizecaps                    : "",
+         hlkcompl     ? ", \"flag-hlk-compliance\""    : ""
     );
 
     if (n < 0) {
