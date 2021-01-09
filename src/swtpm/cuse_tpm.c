@@ -109,6 +109,9 @@ static uint32_t locality_flags;
 /* the fuse_session that we will signal an exit to to exit the prg. */
 static struct fuse_session *ptm_fuse_session;
 
+/* flags to set using TPMLIB_SetFlags() */
+static uint64_t libtpms_flags;
+
 #if GLIB_MAJOR_VERSION >= 2
 # if GLIB_MINOR_VERSION >= 32
 
@@ -224,10 +227,17 @@ static const char *usage =
 "                       instead;\n"
 "                       mode allows a user to set the file mode bits of the state\n"
 "                       files; the default mode is 0640;\n"
-"--flags [not-need-init][,startup-clear|startup-state|startup-deactivated|startup-none]\n"
+"--flags [not-need-init][,startup-clear|startup-state|startup-deactivated|startup-none]"
+#ifdef LIBTPMS_HAS_FLAGS_SUPPORT
+"[,hlk-compliance]"
+#endif
+                  "\n"
 "                    :  not-need-init: commands can be sent without needing to\n"
 "                       send an INIT via control channel;\n"
 "                       startup-...: send Startup command with this type;\n"
+#ifdef LIBTPMS_HAS_FLAGS_SUPPORT
+"                       hlk-compliance: set hlk-compliance flag on libtpms;\n"
+#endif
 "-r|--runas <user>   :  after creating the CUSE device, change to the given\n"
 "                       user\n"
 "--tpm2              :  choose TPM2 functionality\n"
@@ -425,10 +435,11 @@ static void worker_thread(gpointer data, gpointer user_data)
  *
  * @flags: libtpms init flags
  * @l_tpmversion: the version of the TPM
+ * @libtpms_flags: flags for libtpms
  * @res: the result from starting the TPM
  */
 static int tpm_start(uint32_t flags, TPMLIB_TPMVersion l_tpmversion,
-                     TPM_RESULT *res)
+                     uint64_t libtpms_flags, TPM_RESULT *res)
 {
     DIR *dir;
     const char *tpmdir = tpmstate_get_dir();
@@ -466,7 +477,7 @@ static int tpm_start(uint32_t flags, TPMLIB_TPMVersion l_tpmversion,
         goto error_del_pool;
     }
 
-    *res = tpmlib_start(flags, l_tpmversion);
+    *res = tpmlib_start(flags, l_tpmversion, libtpms_flags);
     if (*res != TPM_SUCCESS)
         goto error_del_pool;
 
@@ -1049,7 +1060,8 @@ static void ptm_ioctl(fuse_req_t req, int cmd, void *arg,
             TPMLIB_Terminate();
 
             tpm_running = false;
-            if (tpm_start(init_p->u.req.init_flags, tpmversion, &res) < 0) {
+            if (tpm_start(init_p->u.req.init_flags, tpmversion, libtpms_flags,
+                          &res) < 0) {
                 logprintf(STDERR_FILENO,
                           "Error: Could not initialize the TPM.\n");
             } else {
@@ -1609,7 +1621,7 @@ int swtpm_cuse_main(int argc, char **argv, const char *prgname, const char *ifac
         handle_seccomp_options(param.seccompdata, &param.seccomp_action) < 0 ||
         handle_locality_options(param.localitydata, &locality_flags) < 0 ||
         handle_flags_options(param.flagsdata, &need_init_cmd,
-                             &param.startupType) < 0) {
+                             &param.startupType, &libtpms_flags) < 0) {
         ret = -3;
         goto exit;
     }
@@ -1671,7 +1683,7 @@ int swtpm_cuse_main(int argc, char **argv, const char *prgname, const char *ifac
     worker_thread_init();
 
     if (!need_init_cmd) {
-        if (tpm_start(0, tpmversion, &res) < 0) {
+        if (tpm_start(0, tpmversion, libtpms_flags, &res) < 0) {
             ret = -1;
             goto exit;
         }

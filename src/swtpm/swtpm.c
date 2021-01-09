@@ -168,10 +168,15 @@ static void usage(FILE *file, const char *prgname, const char *iface)
     "                   mode allows a user to set the file mode bits of the socket; the\n"
     "                   value must be given in octal number format;\n"
     "                   uid and gid set the ownership of the Unixio socket's file;\n"
-    "--flags [not-need-init][,startup-clear|startup-state|startup-deactivated|startup-none]\n"
+    "--flags [not-need-init][,startup-clear|startup-state|startup-deactivated|startup-none]"
+#ifdef LIBTPMS_HAS_FLAGS_SUPPORT
+    "[,hlk-compliance]"
+#endif
+                       "\n"
     "                 : not-need-init: commands can be sent without needing to\n"
     "                   send an INIT via control channel;\n"
     "                   startup-...: send Startup command with this type;\n"
+    "                   hlk-compliance: set hlk-compliance flag on libtpms;\n"
     "-r|--runas <user>: change to the given user\n"
     "--tpm2           : choose TPM2 functionality\n"
 #ifdef WITH_SECCOMP
@@ -212,6 +217,7 @@ int swtpm_main(int argc, char **argv, const char *prgname, const char *iface)
         .locality_flags = 0,
         .tpmversion = TPMLIB_TPM_VERSION_1_2,
         .startupType = _TPM_ST_NONE,
+        .libtpms_flags = 0,
     };
     struct server *server = NULL;
     unsigned long val;
@@ -440,7 +446,7 @@ int swtpm_main(int argc, char **argv, const char *prgname, const char *iface)
         handle_tpmstate_options(tpmstatedata) < 0 ||
         handle_seccomp_options(seccompdata, &seccomp_action) < 0 ||
         handle_flags_options(flagsdata, &need_init_cmd,
-                             &mlp.startupType) < 0) {
+                             &mlp.startupType, &mlp.libtpms_flags) < 0) {
         goto exit_failure;
     }
 
@@ -488,7 +494,7 @@ int swtpm_main(int argc, char **argv, const char *prgname, const char *iface)
         goto error_no_tpm;
 
     if (!need_init_cmd) {
-        if ((rc = tpmlib_start(0, mlp.tpmversion)))
+        if ((rc = tpmlib_start(0, mlp.tpmversion, mlp.libtpms_flags)))
             goto error_no_tpm;
         tpm_running = true;
     }

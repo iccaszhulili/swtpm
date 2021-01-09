@@ -87,7 +87,8 @@ TPM_RESULT tpmlib_register_callbacks(struct libtpms_callbacks *cbs)
     return res;
 }
 
-TPM_RESULT tpmlib_start(uint32_t flags, TPMLIB_TPMVersion tpmversion)
+TPM_RESULT tpmlib_start(uint32_t flags, TPMLIB_TPMVersion tpmversion,
+                        uint64_t libtpms_flags)
 {
     TPM_RESULT res;
 
@@ -116,6 +117,16 @@ TPM_RESULT tpmlib_start(uint32_t flags, TPMLIB_TPMVersion tpmversion)
             goto error_terminate;
         }
     }
+
+#ifdef LIBTPMS_HAS_FLAGS_SUPPORT
+    if ((res = TPMLIB_SetFlags(libtpms_flags)) != TPM_SUCCESS) {
+        logprintf(STDERR_FILENO,
+                  "Error: Could not set libtpms flags using "
+                  "TPMLIB_SetFlags.\n");
+        goto error_terminate;
+    }
+#endif
+
     return TPM_SUCCESS;
 
 error_terminate:
@@ -434,4 +445,16 @@ uint32_t tpmlib_create_startup_cmd(uint16_t startupType,
     if (tocopy)
         memcpy(buffer, &ts, tocopy);
     return tocopy;
+}
+
+/* Check if the given flag is supported by libtpms */
+bool tpmlib_is_flag_supported(uint64_t flag)
+{
+    uint64_t supported_flags = 0;
+
+#ifdef LIBTPMS_HAS_FLAGS_SUPPORT
+    TPMLIB_GetFlags(&supported_flags);
+#endif
+
+    return !!(supported_flags & flag);
 }

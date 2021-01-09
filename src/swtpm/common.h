@@ -52,7 +52,7 @@ struct server;
 int handle_server_options(char *options, struct server **s);
 int handle_locality_options(char *options, uint32_t *flags);
 int handle_flags_options(char *options, bool *need_init_cmd,
-                         uint16_t *startupType);
+                         uint16_t *startupType, uint64_t *libtpms_flags);
 #ifdef WITH_SECCOMP
 int handle_seccomp_options(char *options, unsigned int *seccomp_action);
 #else

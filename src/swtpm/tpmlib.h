@@ -46,10 +46,12 @@
 const char *tpmlib_get_blobname(uint32_t blobtype);
 enum TPMLIB_StateType tpmlib_blobtype_to_statetype(uint32_t blobtype);
 TPM_RESULT tpmlib_register_callbacks(struct libtpms_callbacks *cbs);
-TPM_RESULT tpmlib_start(uint32_t flags, TPMLIB_TPMVersion tpmversion);
+TPM_RESULT tpmlib_start(uint32_t flags, TPMLIB_TPMVersion tpmversion,
+                        uint64_t libtpms_flags);
 int tpmlib_get_tpm_property(enum TPMLIB_TPMProperty prop);
 bool tpmlib_is_request_cancelable(TPMLIB_TPMVersion tpmversion,
                                   const unsigned char *request, size_t req_len);
+bool tpmlib_is_flag_supported(uint64_t flag);
 void tpmlib_write_fatal_error_response(unsigned char **rbuffer,
                                        uint32_t *rlength,
                                        uint32_t *rTotal,

@@ -56,6 +56,7 @@
 #endif
 
 #include <libtpms/tpm_error.h>
+#include <libtpms/tpm_library.h>
 
 #include "common.h"
 #include "options.h"
@@ -248,6 +249,10 @@ static const OptionDesc flags_opt_desc[] = {
     },
     {
         .name = "startup-deactivated",
+        .type = OPT_TYPE_BOOLEAN,
+    },
+    {
+        .name = "hlk-compliance",
         .type = OPT_TYPE_BOOLEAN,
     },
     END_OPTION_DESC
@@ -1172,7 +1177,7 @@ int handle_locality_options(char *options, uint32_t *flags)
 }
 
 static int parse_flags_options(char *options, bool *need_init_cmd,
-                               uint16_t *startupType)
+                               uint16_t *startupType, uint64_t *libtpms_flags)
 {
     OptionValues *ovs = NULL;
     char *error = NULL;
@@ -1194,6 +1199,19 @@ static int parse_flags_options(char *options, bool *need_init_cmd,
         *startupType = TPM_ST_DEACTIVATED;
     else if (option_get_bool(ovs, "startup-none", false))
         *startupType = _TPM_ST_NONE;
+    else if (option_get_bool(ovs, "hlk-compliance", false)) {
+        uint64_t flag_to_set = 0;
+#ifdef LIBTPMS_HAS_FLAGS_SUPPORT
+        flag_to_set = TPMLIB_FLAG_HLK_COMPLIANCE;
+#endif
+        if (!tpmlib_is_flag_supported(flag_to_set)) {
+            logprintf(STDERR_FILENO,
+                      "Error: hlk-compliance is not supported by this version "
+                      "of libtpms or was missing in libtpms at swtpm build-time\n");
+            goto error;
+        }
+        *libtpms_flags |= flag_to_set;
+    }
 
     if (*startupType != _TPM_ST_NONE)
         *need_init_cmd = false;
@@ -1217,12 +1235,13 @@ error:
  * Returns 0 on success, -1 on failure.
  */
 int handle_flags_options(char *options, bool *need_init_cmd,
-                         uint16_t *startupType)
+                         uint16_t *startupType, uint64_t *libtpms_flags)
 {
     if (!options)
         return 0;
 
-    if (parse_flags_options(options, need_init_cmd, startupType) < 0)
+    if (parse_flags_options(options, need_init_cmd, startupType,
+                            libtpms_flags) < 0)
         return -1;
 
     return 0;
