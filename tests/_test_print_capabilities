@@ -25,8 +25,9 @@ if [ "${SWTPM_IFACE}" != "cuse" ]; then
 	noncuse='"tpm-send-command-header", "flags-opt-startup", '
 fi
 
-exp='{ "type": "swtpm", "features": [ '${noncuse}${seccomp}'"cmdarg-key-fd", "cmdarg-pwd-fd" ] }'
-if [ "${msg}" != "${exp}" ]; then
+# The are some variable parameters at the end, use regex
+exp='\{ "type": "swtpm", "features": \[ '${noncuse}${seccomp}'"cmdarg-key-fd", "cmdarg-pwd-fd"(, "flag-hlk-compliance")? \] \}'
+if ! [[ ${msg} =~ ${exp} ]]; then
 	echo "Unexpected response from ${SWTPM_IFACE} TPM to --print-capabilities:"
 	echo "Actual   : ${msg}"
 	echo "Expected : ${exp}"
