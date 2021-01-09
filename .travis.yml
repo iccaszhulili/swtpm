@@ -55,6 +55,7 @@ script:
   - sudo pip3 install --upgrade cryptography
   - if [ ! -d libtpms ]; then git clone https://github.com/stefanberger/libtpms; fi
   - cd libtpms
+  - LIBTPMS_GIT_CHECKOUT=origin/dynamic_hlk_compliance
   - if [ -n "${LIBTPMS_GIT_CHECKOUT}" ]; then
        git checkout "${LIBTPMS_GIT_CHECKOUT}" -b testing;
     fi
