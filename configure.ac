@@ -176,6 +176,14 @@ AC_CHECK_LIB(tpms,
 )
 AC_SUBST([LIBTPMS_LIBS])
 
+dnl For some more recent features we need libtpms 0.8.0 for TPMLIB_Clear/Get/SetFlags
+dnl but also don't need to enitrely break with older libtpms versions.
+AC_CHECK_LIB(tpms,
+             TPMLIB_SetFlags,
+             AC_DEFINE_UNQUOTED([LIBTPMS_HAS_FLAGS_SUPPORT],1,
+                                [whether libtpms has TPMLIB_Clear/Get/SetFlags support])
+)
+
 AC_CHECK_LIB(c, clock_gettime, LIBRT_LIBS="", LIBRT_LIBS="-lrt")
 AC_SUBST([LIBRT_LIBS])
 
